@@ -1,306 +1,331 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
-
-<title>OPEC Attendance</title>
-
-<script src="https://unpkg.com/html5-qrcode"
-        type="text/javascript">
-</script>
-
-<style>
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f3f6fa;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.card {
-  width: 95%;
-  max-width: 750px;
-  background: white;
-  border-radius: 25px;
-  padding: 35px;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.10);
-}
-
-.logo {
-  font-size: 42px;
-  font-weight: bold;
-  color: #172b4d;
-}
-
-.title {
-  font-size: 22px;
-  color: #68758a;
-  margin-bottom: 20px;
-}
-
-.instruction {
-  font-size: 25px;
-  font-weight: bold;
-  margin-bottom: 20px;
-}
-
-#reader {
-  width: 100%;
-  max-width: 650px;
-  margin: auto;
-  border-radius: 20px;
-  overflow: hidden;
-}
-
-.status {
-  margin-top: 20px;
-  font-size: 18px;
-  color: #68758a;
-}
-
-.success {
-  color: #15803d;
-  font-weight: bold;
-}
-
-.error {
-  color: #dc2626;
-  font-weight: bold;
-}
-
-.detected {
-  margin-top: 20px;
-  padding: 15px;
-  background: #ecfdf5;
-  border-radius: 10px;
-  color: #15803d;
-  font-weight: bold;
-  display: none;
-}
-
-.cameraSelect {
-  margin-bottom: 15px;
-  padding: 10px;
-  font-size: 16px;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-}
-
-</style>
-
-</head>
-
-
-<body>
-
-<div class="card">
-
-  <div class="logo">
-    OPEC
-  </div>
-
-  <div class="title">
-    Employee Attendance
-  </div>
-
-  <div class="instruction">
-    PLEASE SCAN YOUR QR CODE
-  </div>
-
-
-  <select id="cameraSelect"
-          class="cameraSelect">
-  </select>
-
-
-  <div id="reader"></div>
-
-
-  <div id="status"
-       class="status">
-
-    Starting camera...
-
-  </div>
-
-
-  <div id="detected"
-       class="detected">
-
-    ✓ QR CODE DETECTED
-
-  </div>
-
-</div>
-
-
 <script>
-
 
 /* =====================================================
    SETTINGS
    ===================================================== */
 
+const APPS_SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbxvi8ohV2MzVZY2GWJMveirCREAhDuqyWthqFQ0LbrQo9Cx-h9nursObxBb9GkmQIgy/exec';
 
-/*
- * IMPORTANT:
- *
- * Replace the URL below with your
- * Google Apps Script Web App URL.
- */
-
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvi8ohV2MzVZY2GWJMveirCREAhDuqyWthqFQ0LbrQo9Cx-h9nursObxBb9GkmQIgy/exec';
 
 /* =====================================================
    VARIABLES
    ===================================================== */
 
 let scanner = null;
-
 let alreadyScanned = false;
+let startingCamera = false;
 
 
 /* =====================================================
-   GET AVAILABLE CAMERAS
+   ELEMENTS
    ===================================================== */
 
-Html5Qrcode.getCameras()
+const statusElement =
+  document.getElementById("status");
 
-.then(function(cameras) {
+const detectedElement =
+  document.getElementById("detected");
+
+const cameraSelect =
+  document.getElementById("cameraSelect");
 
 
-  const cameraSelect =
-    document.getElementById("cameraSelect");
+/* =====================================================
+   STATUS
+   ===================================================== */
 
+function showStatus(message, type) {
 
-  /*
-   * Check if camera exists
-   */
+  if (type === "error") {
 
-  if (!cameras || cameras.length === 0) {
-
-    document.getElementById(
-      "status"
-    ).innerHTML =
-
+    statusElement.innerHTML =
       "<span class='error'>" +
-      "No camera detected." +
+      message +
       "</span>";
+
+  }
+
+  else if (type === "success") {
+
+    statusElement.innerHTML =
+      "<span class='success'>" +
+      message +
+      "</span>";
+
+  }
+
+  else {
+
+    statusElement.innerText = message;
+
+  }
+
+}
+
+
+/* =====================================================
+   GET CAMERAS WITH RETRY
+   ===================================================== */
+
+async function getCamerasWithRetry(attempts = 5) {
+
+  let lastError = null;
+
+  for (let i = 0; i < attempts; i++) {
+
+    try {
+
+      console.log(
+        "Requesting cameras. Attempt:",
+        i + 1
+      );
+
+      const cameras =
+        await Html5Qrcode.getCameras();
+
+      if (cameras && cameras.length > 0) {
+
+        console.log(
+          "Cameras found:",
+          cameras
+        );
+
+        return cameras;
+
+      }
+
+    }
+
+    catch (error) {
+
+      lastError = error;
+
+      console.log(
+        "Camera request failed. Retrying...",
+        error
+      );
+
+    }
+
+    /*
+     * Give Chrome time to release
+     * the previous camera session.
+     */
+
+    await new Promise(function(resolve) {
+
+      setTimeout(resolve, 1000);
+
+    });
+
+  }
+
+  throw lastError ||
+    new Error("No camera detected.");
+
+}
+
+
+/* =====================================================
+   INITIALIZE CAMERA
+   ===================================================== */
+
+async function initializeCamera() {
+
+  if (startingCamera) {
 
     return;
 
   }
 
+  startingCamera = true;
+  alreadyScanned = false;
 
-  /*
-   * Show available cameras
-   */
+  detectedElement.style.display = "none";
 
-  cameras.forEach(function(camera, index) {
+  showStatus(
+    "Starting camera...",
+    "normal"
+  );
+
+  try {
+
+    /*
+     * Make sure any previous scanner
+     * has been completely cleaned up.
+     */
+
+    if (scanner) {
+
+      try {
+
+        await scanner.stop();
+
+      }
+
+      catch (error) {
+
+        console.log(
+          "Previous scanner already stopped."
+        );
+
+      }
+
+      try {
+
+        scanner.clear();
+
+      }
+
+      catch (error) {
+
+        console.log(
+          "Scanner clear skipped."
+        );
+
+      }
+
+      scanner = null;
+
+    }
 
 
-    const option =
-      document.createElement("option");
+    /*
+     * Small delay to allow Chrome
+     * to release the previous camera.
+     */
 
+    await new Promise(function(resolve) {
 
-    option.value =
-      camera.id;
-
-
-    option.text =
-      camera.label ||
-      "Camera " + (index + 1);
-
-
-    cameraSelect.appendChild(option);
-
-  });
-
-
-  /*
-   * Try to find HP camera
-   */
-
-  let selectedCamera =
-    cameras.find(function(camera) {
-
-      return camera.label
-        .toLowerCase()
-        .includes("hp");
+      setTimeout(resolve, 800);
 
     });
 
 
-  /*
-   * If HP camera is not found,
-   * use the first camera.
-   */
+    /*
+     * Get available cameras.
+     */
 
-  if (!selectedCamera) {
+    const cameras =
+      await getCamerasWithRetry(5);
 
-    selectedCamera =
-      cameras[0];
+
+    /*
+     * Clear camera dropdown.
+     */
+
+    cameraSelect.innerHTML = "";
+
+
+    /*
+     * Add cameras to dropdown.
+     */
+
+    cameras.forEach(function(camera, index) {
+
+      const option =
+        document.createElement("option");
+
+      option.value =
+        camera.id;
+
+      option.text =
+        camera.label ||
+        "Camera " + (index + 1);
+
+      cameraSelect.appendChild(option);
+
+    });
+
+
+    /*
+     * Prefer HP True Vision camera.
+     */
+
+    let selectedCamera =
+      cameras.find(function(camera) {
+
+        return (
+          camera.label &&
+          camera.label
+            .toLowerCase()
+            .includes("hp")
+        );
+
+      });
+
+
+    /*
+     * Otherwise use first camera.
+     */
+
+    if (!selectedCamera) {
+
+      selectedCamera =
+        cameras[0];
+
+    }
+
+
+    /*
+     * Select camera in dropdown.
+     */
+
+    cameraSelect.value =
+      selectedCamera.id;
+
+
+    /*
+     * Start QR scanner.
+     */
+
+    await startScanner(
+      selectedCamera.id
+    );
+
 
   }
 
+  catch (error) {
 
-  /*
-   * Select the camera
-   */
+    console.error(
+      "Camera initialization error:",
+      error
+    );
 
-  cameraSelect.value =
-    selectedCamera.id;
-
-
-  /*
-   * Start scanner
-   */
-
-  startScanner(
-    selectedCamera.id
-  );
-
-})
+    showStatus(
+      "Camera is temporarily unavailable. Retrying...",
+      "error"
+    );
 
 
-.catch(function(error) {
+    /*
+     * Automatically retry.
+     */
 
+    setTimeout(function() {
 
-  console.error(error);
+      startingCamera = false;
 
+      initializeCamera();
 
-  document.getElementById(
-    "status"
-  ).innerHTML =
+    }, 2000);
 
-    "<span class='error'>" +
-    "Unable to access camera." +
-    "</span>";
+    return;
 
-});
+  }
+
+  startingCamera = false;
+
+}
 
 
 /* =====================================================
    START SCANNER
    ===================================================== */
 
-function startScanner(cameraId) {
-
+async function startScanner(cameraId) {
 
   scanner =
     new Html5Qrcode("reader");
@@ -308,26 +333,18 @@ function startScanner(cameraId) {
 
   const config = {
 
-
     fps: 20,
-
-
-    /*
-     * Scanning box
-     */
 
     qrbox: function(
       viewfinderWidth,
       viewfinderHeight
     ) {
 
-
       const minSize =
         Math.min(
           viewfinderWidth,
           viewfinderHeight
         );
-
 
       return {
 
@@ -345,17 +362,11 @@ function startScanner(cameraId) {
 
     },
 
-
-    /*
-     * QR CODE ONLY
-     */
-
     formatsToSupport: [
 
       Html5QrcodeSupportedFormats.QR_CODE
 
     ],
-
 
     disableFlip: false
 
@@ -363,37 +374,27 @@ function startScanner(cameraId) {
 
 
   /*
-   * START CAMERA
+   * Start camera.
    */
 
-  scanner.start(
-
+  await scanner.start(
 
     cameraId,
-
 
     config,
 
 
     /*
-     * =================================================
-     * QR CODE SUCCESSFULLY READ
-     * =================================================
+     * QR successfully detected.
      */
 
-    function(decodedText, decodedResult) {
-
-
-      /*
-       * Prevent multiple scans
-       */
+    async function(decodedText, decodedResult) {
 
       if (alreadyScanned) {
 
         return;
 
       }
-
 
       alreadyScanned = true;
 
@@ -404,180 +405,230 @@ function startScanner(cameraId) {
       );
 
 
-      /*
-       * Update status
-       */
+      showStatus(
+        "✓ QR CODE SUCCESSFULLY READ",
+        "success"
+      );
 
-      document.getElementById(
-        "status"
-      ).innerHTML =
 
-        "<span class='success'>" +
-
-        "✓ QR CODE SUCCESSFULLY READ" +
-
-        "</span>";
+      detectedElement.style.display =
+        "block";
 
 
       /*
-       * Show detected message
+       * STOP CAMERA BEFORE LEAVING PAGE
        */
 
-      document.getElementById(
-        "detected"
-      ).style.display = "block";
+      try {
 
-
-      /*
-       * Stop camera
-       */
-
-      scanner.stop()
-
-
-      .then(function() {
-
+        await scanner.stop();
 
         console.log(
-          "Scanner stopped."
+          "Camera stopped successfully."
         );
 
+      }
 
-        /*
-         * =================================================
-         * SEND QR TO GOOGLE APPS SCRIPT
-         * =================================================
-         */
-
-
-        /*
-         * Make sure the Apps Script URL
-         * has been entered.
-         */
-
-       
-
-        /*
-         * Create destination URL
-         */
-
-        const destination =
-
-          APPS_SCRIPT_URL +
-
-          '?qr=' +
-
-          encodeURIComponent(
-            decodedText
-          );
-
+      catch (error) {
 
         console.log(
-          "Sending QR to Apps Script:",
-          destination
-        );
-
-
-        /*
-         * Open Apps Script result page
-         */
-
-        window.location.href =
-          destination;
-
-
-      })
-
-
-      .catch(function(error) {
-
-
-        console.log(
-          "Scanner stop error:",
+          "Camera stop error:",
           error
         );
 
+      }
+
+
+      /*
+       * CLEAR SCANNER
+       */
+
+      try {
+
+        scanner.clear();
+
+      }
+
+      catch (error) {
+
+        console.log(
+          "Scanner clear error:",
+          error
+        );
+
+      }
+
+
+      scanner = null;
+
+
+      /*
+       * Give Chrome a moment to release
+       * the camera completely.
+       */
+
+      await new Promise(function(resolve) {
+
+        setTimeout(resolve, 500);
 
       });
 
+
+      /*
+       * Send QR to Apps Script.
+       */
+
+      const destination =
+
+        APPS_SCRIPT_URL +
+
+        '?qr=' +
+
+        encodeURIComponent(
+          decodedText
+        );
+
+
+      console.log(
+        "Sending QR to Apps Script:",
+        destination
+      );
+
+
+      window.location.href =
+        destination;
 
     },
 
 
     /*
-     * =================================================
-     * SCANNING ERRORS
-     * =================================================
+     * Normal scanning errors.
      */
 
     function(errorMessage) {
 
-
       /*
-       * Ignore normal scanning errors.
-       *
-       * The scanner continuously reports
-       * errors while searching for a QR.
+       * Ignore normal QR scanning errors.
        */
 
     }
 
-  )
+  );
 
 
-  /*
-   * =================================================
-   * CAMERA STARTED
-   * =================================================
-   */
-
-  .then(function() {
-
-
-    document.getElementById(
-      "status"
-    ).innerText =
-
-      "Camera ready — " +
-
-      "place the QR code inside the box.";
-
-
-  })
-
-
-  /*
-   * =================================================
-   * CAMERA ERROR
-   * =================================================
-   */
-
-  .catch(function(error) {
-
-
-    console.error(
-      "Scanner start error:",
-      error
-    );
-
-
-    document.getElementById(
-      "status"
-    ).innerHTML =
-
-      "<span class='error'>" +
-
-      "Unable to start scanner." +
-
-      "</span>";
-
-
-  });
+  showStatus(
+    "Camera ready — place the QR code inside the box.",
+    "normal"
+  );
 
 }
 
+
+/* =====================================================
+   CAMERA SELECTION CHANGE
+   ===================================================== */
+
+cameraSelect.addEventListener(
+  "change",
+  async function() {
+
+    if (startingCamera) {
+
+      return;
+
+    }
+
+    if (!cameraSelect.value) {
+
+      return;
+
+    }
+
+    startingCamera = true;
+
+    try {
+
+      if (scanner) {
+
+        try {
+
+          await scanner.stop();
+
+        }
+
+        catch (error) {
+
+          console.log(
+            "Scanner stop skipped."
+          );
+
+        }
+
+        try {
+
+          scanner.clear();
+
+        }
+
+        catch (error) {
+
+          console.log(
+            "Scanner clear skipped."
+          );
+
+        }
+
+        scanner = null;
+
+      }
+
+
+      await new Promise(function(resolve) {
+
+        setTimeout(resolve, 500);
+
+      });
+
+
+      alreadyScanned = false;
+
+      await startScanner(
+        cameraSelect.value
+      );
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "Camera selection error:",
+        error
+      );
+
+      showStatus(
+        "Unable to start selected camera.",
+        "error"
+      );
+
+    }
+
+    startingCamera = false;
+
+  }
+);
+
+
+/* =====================================================
+   START
+   ===================================================== */
+
+window.addEventListener(
+  "load",
+  function() {
+
+    initializeCamera();
+
+  }
+);
+
 </script>
-
-</body>
-
-</html>
