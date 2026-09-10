@@ -92,17 +92,6 @@ body {
   display: none;
 }
 
-.result {
-  margin-top: 15px;
-  padding: 15px;
-  background: #f0fdf4;
-  border: 2px solid #22c55e;
-  border-radius: 10px;
-  word-break: break-all;
-  display: none;
-  font-size: 16px;
-}
-
 .cameraSelect {
   margin-bottom: 15px;
   padding: 10px;
@@ -116,92 +105,129 @@ body {
 
 </head>
 
+
 <body>
 
 <div class="card">
 
-<div class="logo">
-OPEC
-</div>
+  <div class="logo">
+    OPEC
+  </div>
 
-<div class="title">
-Employee Attendance
-</div>
+  <div class="title">
+    Employee Attendance
+  </div>
 
-<div class="instruction">
-PLEASE SCAN YOUR QR CODE
-</div>
+  <div class="instruction">
+    PLEASE SCAN YOUR QR CODE
+  </div>
 
-<select id="cameraSelect"
-        class="cameraSelect">
-</select>
 
-<div id="reader"></div>
+  <select id="cameraSelect"
+          class="cameraSelect">
+  </select>
 
-<div id="status"
-     class="status">
 
-Starting camera...
+  <div id="reader"></div>
 
-</div>
 
-<div id="detected"
-     class="detected">
+  <div id="status"
+       class="status">
 
-✓ QR CODE DETECTED
+    Starting camera...
 
-</div>
+  </div>
 
-<div id="result"
-     class="result">
 
-</div>
+  <div id="detected"
+       class="detected">
+
+    ✓ QR CODE DETECTED
+
+  </div>
 
 </div>
 
 
 <script>
 
-let scanner = null;
-let alreadyScanned = false;
+
+/* =====================================================
+   SETTINGS
+   ===================================================== */
 
 
 /*
- * GET AVAILABLE CAMERAS
+ * IMPORTANT:
+ *
+ * Replace the URL below with your
+ * Google Apps Script Web App URL.
  */
+
+const APPS_SCRIPT_URL =
+ 'https://rinbern22-crypto.github.io/opec-attendance-scanner/';
+
+
+/* =====================================================
+   VARIABLES
+   ===================================================== */
+
+let scanner = null;
+
+let alreadyScanned = false;
+
+
+/* =====================================================
+   GET AVAILABLE CAMERAS
+   ===================================================== */
 
 Html5Qrcode.getCameras()
 
 .then(function(cameras) {
 
+
   const cameraSelect =
     document.getElementById("cameraSelect");
 
+
+  /*
+   * Check if camera exists
+   */
+
   if (!cameras || cameras.length === 0) {
 
-    document.getElementById("status").innerHTML =
+    document.getElementById(
+      "status"
+    ).innerHTML =
+
       "<span class='error'>" +
       "No camera detected." +
       "</span>";
 
     return;
+
   }
 
 
   /*
-   * Show all available cameras
+   * Show available cameras
    */
 
   cameras.forEach(function(camera, index) {
 
+
     const option =
       document.createElement("option");
 
-    option.value = camera.id;
+
+    option.value =
+      camera.id;
+
 
     option.text =
       camera.label ||
       "Camera " + (index + 1);
+
 
     cameraSelect.appendChild(option);
 
@@ -209,7 +235,7 @@ Html5Qrcode.getCameras()
 
 
   /*
-   * Try to select the HP camera
+   * Try to find HP camera
    */
 
   let selectedCamera =
@@ -224,30 +250,46 @@ Html5Qrcode.getCameras()
 
   /*
    * If HP camera is not found,
-   * use the first available camera.
+   * use the first camera.
    */
 
   if (!selectedCamera) {
 
-    selectedCamera = cameras[0];
+    selectedCamera =
+      cameras[0];
 
   }
 
+
+  /*
+   * Select the camera
+   */
 
   cameraSelect.value =
     selectedCamera.id;
 
 
-  startScanner(selectedCamera.id);
+  /*
+   * Start scanner
+   */
+
+  startScanner(
+    selectedCamera.id
+  );
 
 })
 
 
 .catch(function(error) {
 
+
   console.error(error);
 
-  document.getElementById("status").innerHTML =
+
+  document.getElementById(
+    "status"
+  ).innerHTML =
+
     "<span class='error'>" +
     "Unable to access camera." +
     "</span>";
@@ -255,11 +297,12 @@ Html5Qrcode.getCameras()
 });
 
 
-/*
- * START SCANNER
- */
+/* =====================================================
+   START SCANNER
+   ===================================================== */
 
 function startScanner(cameraId) {
+
 
   scanner =
     new Html5Qrcode("reader");
@@ -267,12 +310,19 @@ function startScanner(cameraId) {
 
   const config = {
 
+
     fps: 20,
+
+
+    /*
+     * Scanning box
+     */
 
     qrbox: function(
       viewfinderWidth,
       viewfinderHeight
     ) {
+
 
       const minSize =
         Math.min(
@@ -280,43 +330,72 @@ function startScanner(cameraId) {
           viewfinderHeight
         );
 
+
       return {
 
         width:
-          Math.floor(minSize * 0.75),
+          Math.floor(
+            minSize * 0.75
+          ),
 
         height:
-          Math.floor(minSize * 0.75)
+          Math.floor(
+            minSize * 0.75
+          )
 
       };
 
     },
 
+
+    /*
+     * QR CODE ONLY
+     */
+
     formatsToSupport: [
+
       Html5QrcodeSupportedFormats.QR_CODE
+
     ],
+
 
     disableFlip: false
 
   };
 
 
+  /*
+   * START CAMERA
+   */
+
   scanner.start(
 
+
     cameraId,
+
 
     config,
 
 
     /*
-     * QR SUCCESS
+     * =================================================
+     * QR CODE SUCCESSFULLY READ
+     * =================================================
      */
 
     function(decodedText, decodedResult) {
 
+
+      /*
+       * Prevent multiple scans
+       */
+
       if (alreadyScanned) {
+
         return;
+
       }
+
 
       alreadyScanned = true;
 
@@ -327,14 +406,24 @@ function startScanner(cameraId) {
       );
 
 
+      /*
+       * Update status
+       */
+
       document.getElementById(
         "status"
       ).innerHTML =
 
         "<span class='success'>" +
+
         "✓ QR CODE SUCCESSFULLY READ" +
+
         "</span>";
 
+
+      /*
+       * Show detected message
+       */
 
       document.getElementById(
         "detected"
@@ -342,75 +431,145 @@ function startScanner(cameraId) {
 
 
       /*
-       * SHOW THE ACTUAL VALUE
-       */
-
-      const result =
-        document.getElementById("result");
-
-
-      result.style.display = "block";
-
-
-      result.innerHTML =
-
-        "<strong>QR VALUE:</strong><br><br>" +
-
-        decodedText;
-
-
-      /*
-       * STOP CAMERA
+       * Stop camera
        */
 
       scanner.stop()
 
+
       .then(function() {
+
 
         console.log(
           "Scanner stopped."
         );
 
+
+        /*
+         * =================================================
+         * SEND QR TO GOOGLE APPS SCRIPT
+         * =================================================
+         */
+
+
+        /*
+         * Make sure the Apps Script URL
+         * has been entered.
+         */
+
+        if (
+          APPS_SCRIPT_URL ===
+          'PASTE-YOUR-APPS-SCRIPT-URL-HERE'
+        ) {
+
+
+          alert(
+            "Please enter your Google Apps Script Web App URL in index.html."
+          );
+
+
+          return;
+
+        }
+
+
+        /*
+         * Create destination URL
+         */
+
+        const destination =
+
+          APPS_SCRIPT_URL +
+
+          '?qr=' +
+
+          encodeURIComponent(
+            decodedText
+          );
+
+
+        console.log(
+          "Sending QR to Apps Script:",
+          destination
+        );
+
+
+        /*
+         * Open Apps Script result page
+         */
+
+        window.location.href =
+          destination;
+
+
       })
 
+
       .catch(function(error) {
+
 
         console.log(
           "Scanner stop error:",
           error
         );
 
+
       });
+
 
     },
 
 
     /*
-     * SCANNING ERROR
+     * =================================================
+     * SCANNING ERRORS
+     * =================================================
      */
 
     function(errorMessage) {
 
+
       /*
        * Ignore normal scanning errors.
+       *
+       * The scanner continuously reports
+       * errors while searching for a QR.
        */
 
     }
 
   )
 
+
+  /*
+   * =================================================
+   * CAMERA STARTED
+   * =================================================
+   */
+
   .then(function() {
+
 
     document.getElementById(
       "status"
     ).innerText =
 
       "Camera ready — " +
+
       "place the QR code inside the box.";
+
 
   })
 
+
+  /*
+   * =================================================
+   * CAMERA ERROR
+   * =================================================
+   */
+
   .catch(function(error) {
+
 
     console.error(
       "Scanner start error:",
@@ -423,8 +582,11 @@ function startScanner(cameraId) {
     ).innerHTML =
 
       "<span class='error'>" +
+
       "Unable to start scanner." +
+
       "</span>";
+
 
   });
 
