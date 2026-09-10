@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>OPEC Attendance</title>
+
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f6fa;
+      min-height: 100vh;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      width: 95%;
+      max-width: 700px;
+
+      background: white;
+      border-radius: 25px;
+
+      padding: 35px;
+
+      text-align: center;
+
+      box-shadow:
+        0 10px 30px rgba(0,0,0,0.10);
+    }
+
+    .logo {
+      font-size: 42px;
+      font-weight: bold;
+      color: #172b4d;
+    }
+
+    .title {
+      font-size: 22px;
+      color: #68758a;
+      margin-bottom: 25px;
+    }
+
+    .instruction {
+      font-size: 25px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 550px;
+      margin: auto;
+      overflow: hidden;
+      border-radius: 20px;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 17px;
+      color: #68758a;
+    }
+
+    .success {
+      color: #15803d;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #dc2626;
+      font-weight: bold;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+
+    <div class="logo">
+      OPEC
+    </div>
+
+    <div class="title">
+      Employee Attendance
+    </div>
+
+    <div class="instruction">
+      PLEASE SCAN YOUR QR CODE
+    </div>
+
+    <div id="reader"></div>
+
+    <div id="status" class="status">
+      Starting camera...
+    </div>
+
+  </div>
+
+
+  <script>
+
+    let scanner;
+
+
+    function startScanner() {
+
+      scanner =
+        new Html5Qrcode("reader");
+
+
+      const config = {
+
+        fps: 10,
+
+        qrbox: {
+          width: 280,
+          height: 280
+        }
+
+      };
+
+
+      scanner.start(
+
+        {
+          facingMode: "user"
+        },
+
+        config,
+
+
+        function(decodedText) {
+
+          console.log(
+            "QR detected:",
+            decodedText
+          );
+
+
+          document.getElementById(
+            "status"
+          ).innerHTML =
+            "<span class='success'>" +
+            "✓ QR CODE DETECTED" +
+            "</span>";
+
+
+          /*
+           * For now we only test
+           * whether the camera can
+           * read your QR code.
+           */
+
+          console.log(
+            "QR VALUE:",
+            decodedText
+          );
+
+        },
+
+
+        function(errorMessage) {
+
+          /*
+           * Normal scanning errors
+           * are ignored.
+           */
+
+        }
+
+      )
+
+      .then(function() {
+
+        document.getElementById(
+          "status"
+        ).innerText =
+          "Camera ready — show your QR code.";
+
+      })
+
+      .catch(function(error) {
+
+        document.getElementById(
+          "status"
+        ).innerHTML =
+          "<span class='error'>" +
+          "Camera could not be started." +
+          "</span>";
+
+        console.error(error);
+
+      });
+
+    }
+
+
+    window.onload = function() {
+
+      startScanner();
+
+    };
+
+  </script>
+
+</body>
+</html>
