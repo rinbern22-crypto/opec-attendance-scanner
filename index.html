@@ -1,219 +1,437 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>OPEC Attendance</title>
+<meta charset="UTF-8">
 
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+<title>OPEC Attendance</title>
 
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f3f6fa;
-      min-height: 100vh;
+<script src="https://unpkg.com/html5-qrcode"
+        type="text/javascript">
+</script>
 
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
+<style>
 
-    .card {
-      width: 95%;
-      max-width: 700px;
+* {
+  box-sizing: border-box;
+}
 
-      background: white;
-      border-radius: 25px;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f6fa;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-      padding: 35px;
+.card {
+  width: 95%;
+  max-width: 750px;
+  background: white;
+  border-radius: 25px;
+  padding: 35px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.10);
+}
 
-      text-align: center;
+.logo {
+  font-size: 42px;
+  font-weight: bold;
+  color: #172b4d;
+}
 
-      box-shadow:
-        0 10px 30px rgba(0,0,0,0.10);
-    }
+.title {
+  font-size: 22px;
+  color: #68758a;
+  margin-bottom: 20px;
+}
 
-    .logo {
-      font-size: 42px;
-      font-weight: bold;
-      color: #172b4d;
-    }
+.instruction {
+  font-size: 25px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
 
-    .title {
-      font-size: 22px;
-      color: #68758a;
-      margin-bottom: 25px;
-    }
+#reader {
+  width: 100%;
+  max-width: 650px;
+  margin: auto;
+  border-radius: 20px;
+  overflow: hidden;
+}
 
-    .instruction {
-      font-size: 25px;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
+.status {
+  margin-top: 20px;
+  font-size: 18px;
+  color: #68758a;
+}
 
-    #reader {
-      width: 100%;
-      max-width: 550px;
-      margin: auto;
-      overflow: hidden;
-      border-radius: 20px;
-    }
+.success {
+  color: #15803d;
+  font-weight: bold;
+}
 
-    .status {
-      margin-top: 20px;
-      font-size: 17px;
-      color: #68758a;
-    }
+.error {
+  color: #dc2626;
+  font-weight: bold;
+}
 
-    .success {
-      color: #15803d;
-      font-weight: bold;
-    }
+.detected {
+  margin-top: 20px;
+  padding: 15px;
+  background: #ecfdf5;
+  border-radius: 10px;
+  color: #15803d;
+  font-weight: bold;
+  display: none;
+}
 
-    .error {
-      color: #dc2626;
-      font-weight: bold;
-    }
+.result {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f0fdf4;
+  border: 2px solid #22c55e;
+  border-radius: 10px;
+  word-break: break-all;
+  display: none;
+  font-size: 16px;
+}
 
-  </style>
+.cameraSelect {
+  margin-bottom: 15px;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+}
+
+</style>
+
 </head>
 
 <body>
 
-  <div class="card">
+<div class="card">
 
-    <div class="logo">
-      OPEC
-    </div>
+<div class="logo">
+OPEC
+</div>
 
-    <div class="title">
-      Employee Attendance
-    </div>
+<div class="title">
+Employee Attendance
+</div>
 
-    <div class="instruction">
-      PLEASE SCAN YOUR QR CODE
-    </div>
+<div class="instruction">
+PLEASE SCAN YOUR QR CODE
+</div>
 
-    <div id="reader"></div>
+<select id="cameraSelect"
+        class="cameraSelect">
+</select>
 
-    <div id="status" class="status">
-      Starting camera...
-    </div>
+<div id="reader"></div>
 
-  </div>
+<div id="status"
+     class="status">
+
+Starting camera...
+
+</div>
+
+<div id="detected"
+     class="detected">
+
+✓ QR CODE DETECTED
+
+</div>
+
+<div id="result"
+     class="result">
+
+</div>
+
+</div>
 
 
-  <script>
+<script>
 
-    let scanner;
-
-
-    function startScanner() {
-
-      scanner =
-        new Html5Qrcode("reader");
+let scanner = null;
+let alreadyScanned = false;
 
 
-      const config = {
+/*
+ * GET AVAILABLE CAMERAS
+ */
 
-        fps: 10,
+Html5Qrcode.getCameras()
 
-        qrbox: {
-          width: 280,
-          height: 280
-        }
+.then(function(cameras) {
+
+  const cameraSelect =
+    document.getElementById("cameraSelect");
+
+  if (!cameras || cameras.length === 0) {
+
+    document.getElementById("status").innerHTML =
+      "<span class='error'>" +
+      "No camera detected." +
+      "</span>";
+
+    return;
+  }
+
+
+  /*
+   * Show all available cameras
+   */
+
+  cameras.forEach(function(camera, index) {
+
+    const option =
+      document.createElement("option");
+
+    option.value = camera.id;
+
+    option.text =
+      camera.label ||
+      "Camera " + (index + 1);
+
+    cameraSelect.appendChild(option);
+
+  });
+
+
+  /*
+   * Try to select the HP camera
+   */
+
+  let selectedCamera =
+    cameras.find(function(camera) {
+
+      return camera.label
+        .toLowerCase()
+        .includes("hp");
+
+    });
+
+
+  /*
+   * If HP camera is not found,
+   * use the first available camera.
+   */
+
+  if (!selectedCamera) {
+
+    selectedCamera = cameras[0];
+
+  }
+
+
+  cameraSelect.value =
+    selectedCamera.id;
+
+
+  startScanner(selectedCamera.id);
+
+})
+
+
+.catch(function(error) {
+
+  console.error(error);
+
+  document.getElementById("status").innerHTML =
+    "<span class='error'>" +
+    "Unable to access camera." +
+    "</span>";
+
+});
+
+
+/*
+ * START SCANNER
+ */
+
+function startScanner(cameraId) {
+
+  scanner =
+    new Html5Qrcode("reader");
+
+
+  const config = {
+
+    fps: 20,
+
+    qrbox: function(
+      viewfinderWidth,
+      viewfinderHeight
+    ) {
+
+      const minSize =
+        Math.min(
+          viewfinderWidth,
+          viewfinderHeight
+        );
+
+      return {
+
+        width:
+          Math.floor(minSize * 0.75),
+
+        height:
+          Math.floor(minSize * 0.75)
 
       };
 
+    },
 
-      scanner.start(
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.QR_CODE
+    ],
 
-        {
-          facingMode: "user"
-        },
+    disableFlip: false
 
-        config,
-
-
-        function(decodedText) {
-
-          console.log(
-            "QR detected:",
-            decodedText
-          );
+  };
 
 
-          document.getElementById(
-            "status"
-          ).innerHTML =
-            "<span class='success'>" +
-            "✓ QR CODE DETECTED" +
-            "</span>";
+  scanner.start(
+
+    cameraId,
+
+    config,
 
 
-          /*
-           * For now we only test
-           * whether the camera can
-           * read your QR code.
-           */
+    /*
+     * QR SUCCESS
+     */
 
-          console.log(
-            "QR VALUE:",
-            decodedText
-          );
+    function(decodedText, decodedResult) {
 
-        },
+      if (alreadyScanned) {
+        return;
+      }
+
+      alreadyScanned = true;
 
 
-        function(errorMessage) {
+      console.log(
+        "QR CODE FOUND:",
+        decodedText
+      );
 
-          /*
-           * Normal scanning errors
-           * are ignored.
-           */
 
-        }
+      document.getElementById(
+        "status"
+      ).innerHTML =
 
-      )
+        "<span class='success'>" +
+        "✓ QR CODE SUCCESSFULLY READ" +
+        "</span>";
+
+
+      document.getElementById(
+        "detected"
+      ).style.display = "block";
+
+
+      /*
+       * SHOW THE ACTUAL VALUE
+       */
+
+      const result =
+        document.getElementById("result");
+
+
+      result.style.display = "block";
+
+
+      result.innerHTML =
+
+        "<strong>QR VALUE:</strong><br><br>" +
+
+        decodedText;
+
+
+      /*
+       * STOP CAMERA
+       */
+
+      scanner.stop()
 
       .then(function() {
 
-        document.getElementById(
-          "status"
-        ).innerText =
-          "Camera ready — show your QR code.";
+        console.log(
+          "Scanner stopped."
+        );
 
       })
 
       .catch(function(error) {
 
-        document.getElementById(
-          "status"
-        ).innerHTML =
-          "<span class='error'>" +
-          "Camera could not be started." +
-          "</span>";
-
-        console.error(error);
+        console.log(
+          "Scanner stop error:",
+          error
+        );
 
       });
 
+    },
+
+
+    /*
+     * SCANNING ERROR
+     */
+
+    function(errorMessage) {
+
+      /*
+       * Ignore normal scanning errors.
+       */
+
     }
 
+  )
 
-    window.onload = function() {
+  .then(function() {
 
-      startScanner();
+    document.getElementById(
+      "status"
+    ).innerText =
 
-    };
+      "Camera ready — " +
+      "place the QR code inside the box.";
 
-  </script>
+  })
+
+  .catch(function(error) {
+
+    console.error(
+      "Scanner start error:",
+      error
+    );
+
+
+    document.getElementById(
+      "status"
+    ).innerHTML =
+
+      "<span class='error'>" +
+      "Unable to start scanner." +
+      "</span>";
+
+  });
+
+}
+
+</script>
 
 </body>
+
 </html>
