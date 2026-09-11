@@ -1,11 +1,254 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>OPEC Attendance</title>
+
+<script
+  src="https://unpkg.com/html5-qrcode"
+  type="text/javascript">
+</script>
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f6fa;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.card {
+  width: 95%;
+  max-width: 750px;
+  background: white;
+  border-radius: 25px;
+  padding: 35px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.10);
+}
+
+.logo {
+  font-size: 42px;
+  font-weight: bold;
+  color: #172b4d;
+}
+
+.title {
+  font-size: 22px;
+  color: #68758a;
+  margin-bottom: 20px;
+}
+
+.instruction {
+  font-size: 25px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+#reader {
+  width: 100%;
+  max-width: 650px;
+  margin: auto;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.status {
+  margin-top: 20px;
+  font-size: 18px;
+  color: #68758a;
+}
+
+.success {
+  color: #15803d;
+  font-weight: bold;
+}
+
+.error {
+  color: #dc2626;
+  font-weight: bold;
+}
+
+.warning {
+  color: #b45309;
+  font-weight: bold;
+}
+
+.detected {
+  margin-top: 20px;
+  padding: 15px;
+  background: #ecfdf5;
+  border-radius: 10px;
+  color: #15803d;
+  font-weight: bold;
+  display: none;
+}
+
+.cameraSelect {
+  margin-bottom: 15px;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+}
+
+.resultBox {
+  display: none;
+  margin-top: 20px;
+  padding: 30px 20px;
+  border-radius: 20px;
+}
+
+.resultSuccess {
+  background: #ecfdf5;
+}
+
+.resultWarning {
+  background: #fffbeb;
+}
+
+.resultError {
+  background: #fef2f2;
+}
+
+.resultTitle {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.resultEmployee {
+  font-size: 27px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.resultID {
+  color: #68758a;
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.resultTime {
+  font-size: 42px;
+  font-weight: bold;
+  margin: 15px 0;
+}
+
+.resultMessage {
+  font-size: 20px;
+}
+
+.readyMessage {
+  margin-top: 15px;
+  color: #68758a;
+  font-size: 16px;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="card">
+
+  <div class="logo">
+    OPEC
+  </div>
+
+  <div class="title">
+    Employee Attendance
+  </div>
+
+  <div class="instruction">
+    PLEASE SCAN YOUR QR CODE
+  </div>
+
+
+  <select
+    id="cameraSelect"
+    class="cameraSelect">
+  </select>
+
+
+  <div id="reader"></div>
+
+
+  <div id="status"
+       class="status">
+
+    Starting camera...
+
+  </div>
+
+
+  <div id="detected"
+       class="detected">
+
+    ✓ QR CODE DETECTED
+
+  </div>
+
+
+  <div id="resultBox"
+       class="resultBox">
+
+    <div id="resultTitle"
+         class="resultTitle">
+    </div>
+
+    <div id="resultEmployee"
+         class="resultEmployee">
+    </div>
+
+    <div id="resultID"
+         class="resultID">
+    </div>
+
+    <div id="resultTime"
+         class="resultTime">
+    </div>
+
+    <div id="resultMessage"
+         class="resultMessage">
+    </div>
+
+    <div id="readyMessage"
+         class="readyMessage">
+      Preparing scanner...
+    </div>
+
+  </div>
+
+</div>
+
+
 <script>
+
 
 /* =====================================================
    SETTINGS
    ===================================================== */
 
 const APPS_SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbxvi8ohV2MzVZY2GWJMveirCREAhDuqyWthqFQ0LbrQo9Cx-h9nursObxBb9GkmQIgy/exec';
+  'https://script.google.com/macros/s/AKfycbw0BP2N9sXe-4GqYvAwl6YlNXv_7POvqxkQ1GUmIO1tJL09v3m44bpqzm8BArjyApH9/exec';
 
 
 /* =====================================================
@@ -13,8 +256,12 @@ const APPS_SCRIPT_URL =
    ===================================================== */
 
 let scanner = null;
+
 let alreadyScanned = false;
+
 let startingCamera = false;
+
+let callbackCounter = 0;
 
 
 /* =====================================================
@@ -30,12 +277,36 @@ const detectedElement =
 const cameraSelect =
   document.getElementById("cameraSelect");
 
+const resultBox =
+  document.getElementById("resultBox");
+
+const resultTitle =
+  document.getElementById("resultTitle");
+
+const resultEmployee =
+  document.getElementById("resultEmployee");
+
+const resultID =
+  document.getElementById("resultID");
+
+const resultTime =
+  document.getElementById("resultTime");
+
+const resultMessage =
+  document.getElementById("resultMessage");
+
+const readyMessage =
+  document.getElementById("readyMessage");
+
 
 /* =====================================================
    STATUS
    ===================================================== */
 
-function showStatus(message, type) {
+function showStatus(
+  message,
+  type
+) {
 
   if (type === "error") {
 
@@ -55,9 +326,19 @@ function showStatus(message, type) {
 
   }
 
+  else if (type === "warning") {
+
+    statusElement.innerHTML =
+      "<span class='warning'>" +
+      message +
+      "</span>";
+
+  }
+
   else {
 
-    statusElement.innerText = message;
+    statusElement.innerText =
+      message;
 
   }
 
@@ -68,11 +349,19 @@ function showStatus(message, type) {
    GET CAMERAS WITH RETRY
    ===================================================== */
 
-async function getCamerasWithRetry(attempts = 5) {
+async function getCamerasWithRetry(
+  attempts = 5
+) {
 
-  let lastError = null;
+  let lastError =
+    null;
 
-  for (let i = 0; i < attempts; i++) {
+
+  for (
+    let i = 0;
+    i < attempts;
+    i++
+  ) {
 
     try {
 
@@ -81,15 +370,15 @@ async function getCamerasWithRetry(attempts = 5) {
         i + 1
       );
 
+
       const cameras =
         await Html5Qrcode.getCameras();
 
-      if (cameras && cameras.length > 0) {
 
-        console.log(
-          "Cameras found:",
-          cameras
-        );
+      if (
+        cameras &&
+        cameras.length > 0
+      ) {
 
         return cameras;
 
@@ -99,30 +388,83 @@ async function getCamerasWithRetry(attempts = 5) {
 
     catch (error) {
 
-      lastError = error;
+      lastError =
+        error;
 
       console.log(
-        "Camera request failed. Retrying...",
+        "Camera request failed.",
         error
       );
 
     }
 
+
     /*
-     * Give Chrome time to release
-     * the previous camera session.
+     * Wait before retrying.
      */
 
-    await new Promise(function(resolve) {
+    await new Promise(
+      function(resolve) {
 
-      setTimeout(resolve, 1000);
+        setTimeout(
+          resolve,
+          1000
+        );
 
-    });
+      }
+    );
 
   }
 
+
   throw lastError ||
-    new Error("No camera detected.");
+    new Error(
+      "No camera detected."
+    );
+
+}
+
+
+/* =====================================================
+   SELECT BEST CAMERA
+   ===================================================== */
+
+function selectBestCamera(
+  cameras
+) {
+
+  /*
+   * Prefer HP camera.
+   */
+
+  let selected =
+    cameras.find(
+      function(camera) {
+
+        return (
+          camera.label &&
+          camera.label
+            .toLowerCase()
+            .includes("hp")
+        );
+
+      }
+    );
+
+
+  /*
+   * Otherwise use first camera.
+   */
+
+  if (!selected) {
+
+    selected =
+      cameras[0];
+
+  }
+
+
+  return selected;
 
 }
 
@@ -139,72 +481,47 @@ async function initializeCamera() {
 
   }
 
-  startingCamera = true;
-  alreadyScanned = false;
 
-  detectedElement.style.display = "none";
+  startingCamera =
+    true;
+
+  alreadyScanned =
+    false;
+
+
+  detectedElement.style.display =
+    "none";
+
+
+  resultBox.style.display =
+    "none";
+
 
   showStatus(
     "Starting camera...",
     "normal"
   );
 
+
   try {
 
     /*
-     * Make sure any previous scanner
-     * has been completely cleaned up.
+     * Clean previous scanner.
      */
 
-    if (scanner) {
-
-      try {
-
-        await scanner.stop();
-
-      }
-
-      catch (error) {
-
-        console.log(
-          "Previous scanner already stopped."
-        );
-
-      }
-
-      try {
-
-        scanner.clear();
-
-      }
-
-      catch (error) {
-
-        console.log(
-          "Scanner clear skipped."
-        );
-
-      }
-
-      scanner = null;
-
-    }
+    await cleanupScanner();
 
 
     /*
-     * Small delay to allow Chrome
-     * to release the previous camera.
+     * Give Chrome time to release
+     * the previous camera.
      */
 
-    await new Promise(function(resolve) {
-
-      setTimeout(resolve, 800);
-
-    });
+    await wait(800);
 
 
     /*
-     * Get available cameras.
+     * Get cameras.
      */
 
     const cameras =
@@ -212,72 +529,56 @@ async function initializeCamera() {
 
 
     /*
-     * Clear camera dropdown.
+     * Fill camera dropdown.
      */
 
-    cameraSelect.innerHTML = "";
+    cameraSelect.innerHTML =
+      "";
 
 
-    /*
-     * Add cameras to dropdown.
-     */
+    cameras.forEach(
+      function(camera, index) {
 
-    cameras.forEach(function(camera, index) {
-
-      const option =
-        document.createElement("option");
-
-      option.value =
-        camera.id;
-
-      option.text =
-        camera.label ||
-        "Camera " + (index + 1);
-
-      cameraSelect.appendChild(option);
-
-    });
+        const option =
+          document.createElement(
+            "option"
+          );
 
 
-    /*
-     * Prefer HP True Vision camera.
-     */
+        option.value =
+          camera.id;
 
-    let selectedCamera =
-      cameras.find(function(camera) {
 
-        return (
-          camera.label &&
-          camera.label
-            .toLowerCase()
-            .includes("hp")
+        option.text =
+          camera.label ||
+          "Camera " +
+          (index + 1);
+
+
+        cameraSelect.appendChild(
+          option
         );
 
-      });
+      }
+    );
 
 
     /*
-     * Otherwise use first camera.
+     * Select best camera.
      */
 
-    if (!selectedCamera) {
+    const selectedCamera =
+      selectBestCamera(
+        cameras
+      );
 
-      selectedCamera =
-        cameras[0];
-
-    }
-
-
-    /*
-     * Select camera in dropdown.
-     */
 
     cameraSelect.value =
       selectedCamera.id;
 
 
     /*
-     * Start QR scanner.
+     * Start scanner.
      */
 
     await startScanner(
@@ -294,29 +595,111 @@ async function initializeCamera() {
       error
     );
 
+
     showStatus(
       "Camera is temporarily unavailable. Retrying...",
       "error"
     );
 
 
+    startingCamera =
+      false;
+
+
     /*
-     * Automatically retry.
+     * Retry automatically.
      */
 
-    setTimeout(function() {
+    setTimeout(
+      function() {
 
-      startingCamera = false;
+        initializeCamera();
 
-      initializeCamera();
+      },
+      2000
+    );
 
-    }, 2000);
 
     return;
 
   }
 
-  startingCamera = false;
+
+  startingCamera =
+    false;
+
+}
+
+
+/* =====================================================
+   WAIT
+   ===================================================== */
+
+function wait(
+  milliseconds
+) {
+
+  return new Promise(
+    function(resolve) {
+
+      setTimeout(
+        resolve,
+        milliseconds
+      );
+
+    }
+  );
+
+}
+
+
+/* =====================================================
+   CLEANUP SCANNER
+   ===================================================== */
+
+async function cleanupScanner() {
+
+  if (!scanner) {
+
+    return;
+
+  }
+
+
+  try {
+
+    await scanner.stop();
+
+  }
+
+  catch (error) {
+
+    console.log(
+      "Scanner stop skipped:",
+      error
+    );
+
+  }
+
+
+  try {
+
+    scanner.clear();
+
+  }
+
+  catch (error) {
+
+    console.log(
+      "Scanner clear skipped:",
+      error
+    );
+
+  }
+
+
+  scanner =
+    null;
 
 }
 
@@ -325,42 +708,50 @@ async function initializeCamera() {
    START SCANNER
    ===================================================== */
 
-async function startScanner(cameraId) {
+async function startScanner(
+  cameraId
+) {
 
   scanner =
-    new Html5Qrcode("reader");
+    new Html5Qrcode(
+      "reader"
+    );
 
 
   const config = {
 
     fps: 20,
 
-    qrbox: function(
-      viewfinderWidth,
-      viewfinderHeight
-    ) {
 
-      const minSize =
-        Math.min(
-          viewfinderWidth,
-          viewfinderHeight
-        );
+    qrbox:
+      function(
+        viewfinderWidth,
+        viewfinderHeight
+      ) {
 
-      return {
+        const minSize =
+          Math.min(
+            viewfinderWidth,
+            viewfinderHeight
+          );
 
-        width:
-          Math.floor(
-            minSize * 0.75
-          ),
 
-        height:
-          Math.floor(
-            minSize * 0.75
-          )
+        return {
 
-      };
+          width:
+            Math.floor(
+              minSize * 0.75
+            ),
 
-    },
+          height:
+            Math.floor(
+              minSize * 0.75
+            )
+
+        };
+
+      },
+
 
     formatsToSupport: [
 
@@ -368,14 +759,12 @@ async function startScanner(cameraId) {
 
     ],
 
-    disableFlip: false
+
+    disableFlip:
+      false
 
   };
 
-
-  /*
-   * Start camera.
-   */
 
   await scanner.start(
 
@@ -388,7 +777,10 @@ async function startScanner(cameraId) {
      * QR successfully detected.
      */
 
-    async function(decodedText, decodedResult) {
+    async function(
+      decodedText,
+      decodedResult
+    ) {
 
       if (alreadyScanned) {
 
@@ -396,7 +788,9 @@ async function startScanner(cameraId) {
 
       }
 
-      alreadyScanned = true;
+
+      alreadyScanned =
+        true;
 
 
       console.log(
@@ -416,99 +810,33 @@ async function startScanner(cameraId) {
 
 
       /*
-       * STOP CAMERA BEFORE LEAVING PAGE
+       * Stop camera before sending
+       * the QR to Apps Script.
        */
 
-      try {
-
-        await scanner.stop();
-
-        console.log(
-          "Camera stopped successfully."
-        );
-
-      }
-
-      catch (error) {
-
-        console.log(
-          "Camera stop error:",
-          error
-        );
-
-      }
+      await cleanupScanner();
 
 
       /*
-       * CLEAR SCANNER
+       * Send QR to Apps Script
+       * without leaving this page.
        */
 
-      try {
-
-        scanner.clear();
-
-      }
-
-      catch (error) {
-
-        console.log(
-          "Scanner clear error:",
-          error
-        );
-
-      }
-
-
-      scanner = null;
-
-
-      /*
-       * Give Chrome a moment to release
-       * the camera completely.
-       */
-
-      await new Promise(function(resolve) {
-
-        setTimeout(resolve, 500);
-
-      });
-
-
-      /*
-       * Send QR to Apps Script.
-       */
-
-      const destination =
-
-        APPS_SCRIPT_URL +
-
-        '?qr=' +
-
-        encodeURIComponent(
-          decodedText
-        );
-
-
-      console.log(
-        "Sending QR to Apps Script:",
-        destination
+      sendQRToAppsScript(
+        decodedText
       );
-
-
-      window.location.href =
-        destination;
 
     },
 
 
     /*
-     * Normal scanning errors.
+     * Normal QR scanning errors.
      */
 
     function(errorMessage) {
 
       /*
-       * Ignore normal QR scanning errors.
+       * Ignore normal scanning errors.
        */
 
     }
@@ -525,7 +853,491 @@ async function startScanner(cameraId) {
 
 
 /* =====================================================
-   CAMERA SELECTION CHANGE
+   SEND QR TO APPS SCRIPT
+   ===================================================== */
+
+function sendQRToAppsScript(
+  qrValue
+) {
+
+  /*
+   * Create a unique JSONP callback.
+   */
+
+  callbackCounter++;
+
+
+  const callbackName =
+    "opecAttendanceCallback" +
+    Date.now() +
+    "_" +
+    callbackCounter;
+
+
+  /*
+   * Create callback function.
+   */
+
+  window[callbackName] =
+    function(result) {
+
+      console.log(
+        "Attendance result:",
+        result
+      );
+
+
+      /*
+       * Remove callback.
+       */
+
+      try {
+
+        delete window[
+          callbackName
+        ];
+
+      }
+
+      catch (error) {
+
+        window[
+          callbackName
+        ] = undefined;
+
+      }
+
+
+      /*
+       * Remove script tag.
+       */
+
+      const script =
+        document.getElementById(
+          callbackName
+        );
+
+
+      if (script) {
+
+        script.remove();
+
+      }
+
+
+      /*
+       * Display result.
+       */
+
+      displayResult(
+        result
+      );
+
+    };
+
+
+  /*
+   * Build Apps Script URL.
+   */
+
+  const destination =
+    APPS_SCRIPT_URL +
+    "?qr=" +
+    encodeURIComponent(
+      qrValue
+    ) +
+    "&callback=" +
+    encodeURIComponent(
+      callbackName
+    );
+
+
+  console.log(
+    "Sending QR to Apps Script."
+  );
+
+
+  /*
+   * Create script tag.
+   *
+   * This allows cross-domain JSONP.
+   */
+
+  const script =
+    document.createElement(
+      "script"
+    );
+
+
+  script.id =
+    callbackName;
+
+
+  script.src =
+    destination;
+
+
+  script.async =
+    true;
+
+
+  /*
+   * Error handling.
+   */
+
+  script.onerror =
+    function() {
+
+      console.error(
+        "Unable to contact Apps Script."
+      );
+
+
+      try {
+
+        delete window[
+          callbackName
+        ];
+
+      }
+
+      catch (error) {
+
+        window[
+          callbackName
+        ] = undefined;
+
+      }
+
+
+      script.remove();
+
+
+      displayResult({
+
+        success: false,
+
+        type: "error",
+
+        message:
+          "Unable to connect to the attendance system."
+
+      });
+
+    };
+
+
+  document.body.appendChild(
+    script
+  );
+
+}
+
+
+/* =====================================================
+   DISPLAY ATTENDANCE RESULT
+   ===================================================== */
+
+function displayResult(
+  result
+) {
+
+  /*
+   * Hide scanner temporarily.
+   */
+
+  document.getElementById(
+    "reader"
+  ).style.display =
+    "none";
+
+
+  cameraSelect.style.display =
+    "none";
+
+
+  detectedElement.style.display =
+    "none";
+
+
+  resultBox.style.display =
+    "block";
+
+
+  /*
+   * Clear old classes.
+   */
+
+  resultBox.className =
+    "resultBox";
+
+
+  /*
+   * SUCCESS
+   */
+
+  if (
+    result &&
+    result.success
+  ) {
+
+    resultBox.classList.add(
+      "resultSuccess"
+    );
+
+
+    if (
+      result.action ===
+      "TIME IN"
+    ) {
+
+      resultTitle.innerText =
+        "✓ TIME IN";
+
+    }
+
+    else {
+
+      resultTitle.innerText =
+        "✓ TIME OUT";
+
+    }
+
+
+    resultEmployee.innerText =
+      result.employeeName ||
+      "";
+
+
+    resultID.innerText =
+      result.employeeID ||
+      "";
+
+
+    resultTime.innerText =
+      result.time ||
+      "";
+
+
+    resultMessage.innerText =
+      getGreeting();
+
+
+    readyMessage.innerText =
+      "Ready for next employee...";
+
+
+    showStatus(
+      "Attendance recorded successfully.",
+      "success"
+    );
+
+  }
+
+
+  /*
+   * DUPLICATE
+   */
+
+  else if (
+    result &&
+    result.type ===
+      "duplicate"
+  ) {
+
+    resultBox.classList.add(
+      "resultWarning"
+    );
+
+
+    resultTitle.innerText =
+      "⚠ ALREADY RECORDED";
+
+
+    resultEmployee.innerText =
+      result.employeeName ||
+      "";
+
+
+    resultID.innerText =
+      result.employeeID ||
+      "";
+
+
+    resultTime.innerText =
+      result.time ||
+      "";
+
+
+    resultMessage.innerText =
+      result.message ||
+      "This attendance was already recorded.";
+
+
+    readyMessage.innerText =
+      "Returning to scanner...";
+
+
+  }
+
+
+  /*
+   * COMPLETE
+   */
+
+  else if (
+    result &&
+    result.type ===
+      "complete"
+  ) {
+
+    resultBox.classList.add(
+      "resultWarning"
+    );
+
+
+    resultTitle.innerText =
+      "✓ ATTENDANCE COMPLETE";
+
+
+    resultEmployee.innerText =
+      result.employeeName ||
+      "";
+
+
+    resultID.innerText =
+      result.employeeID ||
+      "";
+
+
+    resultTime.innerText =
+      result.time ||
+      "";
+
+
+    resultMessage.innerText =
+      result.message ||
+      "Attendance already completed for today.";
+
+
+    readyMessage.innerText =
+      "Returning to scanner...";
+
+  }
+
+
+  /*
+   * INVALID / ERROR
+   */
+
+  else {
+
+    resultBox.classList.add(
+      "resultError"
+    );
+
+
+    resultTitle.innerText =
+      "✕ ERROR";
+
+
+    resultEmployee.innerText =
+      "";
+
+
+    resultID.innerText =
+      "";
+
+
+    resultTime.innerText =
+      "";
+
+
+    resultMessage.innerText =
+      (
+        result &&
+        result.message
+      ) ||
+      "Unable to process QR code.";
+
+
+    readyMessage.innerText =
+      "Returning to scanner...";
+
+  }
+
+
+  /*
+   * Restart scanner after
+   * displaying result.
+   */
+
+  setTimeout(
+    async function() {
+
+      resultBox.style.display =
+        "none";
+
+
+      document.getElementById(
+        "reader"
+      ).style.display =
+        "block";
+
+
+      cameraSelect.style.display =
+        "inline-block";
+
+
+      showStatus(
+        "Starting camera...",
+        "normal"
+      );
+
+
+      await wait(500);
+
+
+      initializeCamera();
+
+    },
+    3000
+  );
+
+}
+
+
+/* =====================================================
+   GREETING
+   ===================================================== */
+
+function getGreeting() {
+
+  const hour =
+    new Date().getHours();
+
+
+  if (hour < 12) {
+
+    return "Good morning!";
+
+  }
+
+
+  if (hour < 18) {
+
+    return "Good afternoon!";
+
+  }
+
+
+  return "Good evening!";
+
+}
+
+
+/* =====================================================
+   CAMERA SELECTION
    ===================================================== */
 
 cameraSelect.addEventListener(
@@ -538,59 +1350,29 @@ cameraSelect.addEventListener(
 
     }
 
+
     if (!cameraSelect.value) {
 
       return;
 
     }
 
-    startingCamera = true;
+
+    startingCamera =
+      true;
+
 
     try {
 
-      if (scanner) {
-
-        try {
-
-          await scanner.stop();
-
-        }
-
-        catch (error) {
-
-          console.log(
-            "Scanner stop skipped."
-          );
-
-        }
-
-        try {
-
-          scanner.clear();
-
-        }
-
-        catch (error) {
-
-          console.log(
-            "Scanner clear skipped."
-          );
-
-        }
-
-        scanner = null;
-
-      }
+      alreadyScanned =
+        false;
 
 
-      await new Promise(function(resolve) {
-
-        setTimeout(resolve, 500);
-
-      });
+      await cleanupScanner();
 
 
-      alreadyScanned = false;
+      await wait(500);
+
 
       await startScanner(
         cameraSelect.value
@@ -605,6 +1387,7 @@ cameraSelect.addEventListener(
         error
       );
 
+
       showStatus(
         "Unable to start selected camera.",
         "error"
@@ -612,14 +1395,16 @@ cameraSelect.addEventListener(
 
     }
 
-    startingCamera = false;
+
+    startingCamera =
+      false;
 
   }
 );
 
 
 /* =====================================================
-   START
+   START APPLICATION
    ===================================================== */
 
 window.addEventListener(
@@ -632,3 +1417,7 @@ window.addEventListener(
 );
 
 </script>
+
+</body>
+
+</html>
